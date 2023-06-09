@@ -25,7 +25,8 @@ class OpenApiGenerator
             $output = Yaml::dump(
                 $openapi->toArray(),
                 config('openapi.yaml.format.inline', 2),
-                config('openapi.yaml.format.indent', 4)
+                config('openapi.yaml.format.indent', 4),
+                Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE
             );
         } elseif ($format === 'json') {
             $output = json_encode($openapi->toArray(), JSON_PRETTY_PRINT);
