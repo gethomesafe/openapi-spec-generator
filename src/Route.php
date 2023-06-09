@@ -13,23 +13,17 @@ use LaravelJsonApi\Eloquent\Fields\Relations\Relation;
 class Route
 {
     protected Server $server;
-
     protected Schema $schema;
-
     protected IlluminateRoute $route;
-
     protected string $resource;
-
     /**
      * @var string The controller class FQN
      */
     protected string $controller;
-
     /**
      * @var string The method name on the controller
      */
     protected string $method;
-
     /**
      * The last part of the route name. For the 'showRelated' method, the name
      * is manually added.
@@ -37,17 +31,14 @@ class Route
      * @var string
      */
     protected string $action;
-
     /**
      * @var string The route name without the prefix
      */
     protected string $operationId;
-
     /**
      * @var string
      */
     protected string $uri;
-
     /**
      * @var string|null
      */
@@ -57,7 +48,7 @@ class Route
      * Route constructor.
      *
      * @param \LaravelJsonApi\Contracts\Server\Server $server
-     * @param \Illuminate\Routing\Route               $route
+     * @param \Illuminate\Routing\Route $route
      */
     public function __construct(Server $server, IlluminateRoute $route)
     {
@@ -78,7 +69,7 @@ class Route
         } elseif (count($segments) === 3) {
             [$resource, $relation, $action] = $segments;
         } else {
-            throw new \LogicException('Unable to handle action structure '.$route->getName());
+            throw new \LogicException('Unable to handle action structure ' . $route->getName());
         }
 
         $this->resource = $resource;
@@ -106,8 +97,8 @@ class Route
     public function method(): string
     {
         return collect($this->route->methods())
-          ->filter(fn ($method) => $method !== 'HEAD')
-          ->first();
+            ->filter(fn($method) => $method !== 'HEAD')
+            ->first();
     }
 
     /**
@@ -164,7 +155,7 @@ class Route
     public function relation(): ?Relation
     {
         $relation = $this->relation ? $this->schema()
-          ->relationship($this->relation) : null;
+            ->relationship($this->relation) : null;
 
         if ($relation !== null && !($relation instanceof Relation)) {
             throw new \RuntimeException('Unexpected Type');
@@ -208,7 +199,7 @@ class Route
             }
 
             return $this->server->schemas()
-              ->schemaFor($this->relation() !== null ? $this->relation()->inverse() : null);
+                ->schemaFor($this->relation() !== null ? $this->relation()->inverse() : null);
         }
 
         return null;
@@ -225,11 +216,11 @@ class Route
             if ($relation instanceof PolymorphicRelation) {
                 foreach ($relation->inverseTypes() as $type) {
                     $schemas[$type] = $this->server->schemas()
-                      ->schemaFor($type);
+                        ->schemaFor($type);
                 }
             } else {
                 $schemas[$relation->inverse()] = $this->server->schemas()
-                  ->schemaFor($relation->inverse());
+                    ->schemaFor($relation->inverse());
             }
         }
 
@@ -279,8 +270,8 @@ class Route
     }
 
     public static function belongsTo(
-      IlluminateRoute $route,
-      Server $server
+        IlluminateRoute $route,
+        Server $server
     ): bool {
         return Str::contains(
             $route->getName(),
@@ -288,19 +279,26 @@ class Route
         );
     }
 
-  protected function setUriForRoute(): void
-  {
-      $domain = URL::to('/');
-      $serverBasePath = str_replace(
-          $domain,
-          '',
-          $this->server->url(),
-      );
+    protected function setUriForRoute(): void
+    {
+        $serverUrl = $this->server->url();
+        $endpointUrl = URL::toRoute($this->route(), [], true);
+        $shortEndpointUrl = str_replace(
+            $serverUrl,
+            '',
+            $endpointUrl,
+        );
+        if (Str::startsWith($shortEndpointUrl, 'https://')) {
+            throw new \Exception(
+                "The route {$this->route()->getName()} seems to be misconfigued, the route url and the server url are not sharing a common root."
+                . " Check the Server baseUri and the route prefix config."
+            );
+        }
 
-      $this->uri = str_replace(
-          $serverBasePath,
-          '',
-          '/'.$this->route->uri(),
-      );
-  }
+        if (!Str::startsWith($shortEndpointUrl, "/")) {
+            $shortEndpointUrl = "/" . $shortEndpointUrl;
+        }
+
+        $this->uri = $shortEndpointUrl;
+    }
 }
